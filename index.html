@@ -85,16 +85,37 @@ button{cursor:pointer}
 
 /* tabs */
 .tabs{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;margin-bottom:10px}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--soft);border-radius:12px;padding:4px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);background:var(--soft);border-radius:12px;padding:4px}
 .seg button{border:0;background:none;padding:8px 0;border-radius:9px;font-weight:600;font-size:.88rem;color:var(--sub)}
 .seg button[aria-selected="true"],.seg button[aria-checked="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(16,24,40,.08)}
 .seg button:focus-visible,.month button:focus-visible,.iconbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:12px}
 .panel{display:grid;gap:12px}
-.ctitle{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ctitle{display:flex;justify-content:space-between;align-items:baseline;gap:4px 8px;flex-wrap:wrap}
 .ctitle h2{font-size:.95rem;font-weight:700;margin:0}
 .ctitle span{font-size:.78rem;color:var(--faint)}
+
+/* calendar */
+.cal{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);font-size:.72rem;font-weight:600;color:var(--sub);text-align:center;padding:10px 0 8px;border-bottom:1px solid var(--line)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line)}
+.day{background:var(--card);min-height:68px;padding:6px 4px 5px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;text-align:left;min-width:0;font:inherit;color:inherit;cursor:pointer}
+.day.blank{cursor:default;background:var(--soft)}
+.day .n{font-size:.78rem;font-weight:600;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;margin:-2px 0 auto -2px}
+.day.today .n{background:var(--accent);color:var(--icon-ink)}
+.day.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+.day .v{font-size:.66rem;font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100%;overflow:hidden}
+.day .v.in{color:var(--in)}
+.day .v.out{color:var(--out)}
+.day:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.dlist{display:grid}
+.drow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.drow:first-child{border-top:0}
+.drow .ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-size:.72rem;font-weight:800;color:var(--icon-ink)}
+.drow b{display:block;font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow small{color:var(--faint);font-size:.76rem}
+.drow .a{font-weight:700;font-size:.9rem}
 
 /* categories */
 .cats{display:grid;gap:12px}
@@ -205,6 +226,7 @@ textarea{width:100%;min-height:110px;border:1px solid var(--line);background:var
   <nav class="tabs">
     <div class="seg" role="tablist">
       <button role="tab" id="tab-overview" aria-controls="p-overview" aria-selected="true">Overview</button>
+      <button role="tab" id="tab-calendar" aria-controls="p-calendar" aria-selected="false">Calendar</button>
       <button role="tab" id="tab-activity" aria-controls="p-activity" aria-selected="false">Activity</button>
       <button role="tab" id="tab-settings" aria-controls="p-settings" aria-selected="false">Settings</button>
     </div>
@@ -223,6 +245,18 @@ textarea{width:100%;min-height:110px;border:1px solid var(--line);background:var
     <div class="card">
       <div class="ctitle"><h2>Top places</h2><span>by amount spent</span></div>
       <div class="mlist" id="merchants"></div>
+    </div>
+  </section>
+
+  <!-- Calendar -->
+  <section class="panel" id="p-calendar" role="tabpanel" aria-labelledby="tab-calendar" hidden>
+    <div class="cal">
+      <div class="cal-head"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+    <div class="card" id="dayCard">
+      <div class="ctitle"><h2 id="dayTitle">Pick a day</h2><span id="dayTotals"></span></div>
+      <div class="dlist" id="dayList"></div>
     </div>
   </section>
 
@@ -300,7 +334,8 @@ function load(){
 function monthTx(){var y=viewMonth.getFullYear(),m=viewMonth.getMonth();return txs.filter(function(t){var d=new Date(t.ts);return d.getFullYear()===y&&d.getMonth()===m})}
 
 /* tabs */
-var TABS=["overview","activity","settings"];
+var TABS=["overview","calendar","activity","settings"];
+var selDay=null;
 function showTab(name){
   TABS.forEach(function(t){$("tab-"+t).setAttribute("aria-selected",t===name);$("p-"+t).hidden=t!==name});
   try{localStorage.setItem("tab",name)}catch(e){}
@@ -328,7 +363,8 @@ function render(){
   var end=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,1).getTime();
   var lb=txs.filter(function(t){return t.ts<end&&t.balance!=null&&t.balance!==""&&!isNaN(t.balance)}).sort(function(a,b){return b.ts-a.ts})[0];
   if(lb){$("balLabel").textContent="Balance"+(lb.bank?" · "+lb.bank+(lb.account?" ··"+lb.account:""):"");var p=money(lb.balance).split(".");$("sBal").innerHTML=esc(p[0])+"<small>."+esc(p[1])+"</small>";}
-  else{$("balLabel").textContent="Balance";$("sBal").innerHTML="—";}
+  else{$("balLabel").textContent="This month";var q=money(net).split(".");$("sBal").innerHTML=(net<0?"−":"")+esc(q[0])+"<small>."+esc(q[1])+"</small>";}
+  $("sNet").parentNode.hidden=!lb;
   var daysIn=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,0).getDate();
   // budget
   if(budget>0){
@@ -339,9 +375,35 @@ function render(){
     $("mDay").innerHTML=isCur&&left>0?"<b>"+money(left/rem,true)+"</b> a day for "+rem+" days":"";
   } else {$("budgetWrap").hidden=true}
   renderOverview(out,spent,daysIn,isCur,now);
+  renderCalendar(list,daysIn,isCur,now);
   renderActivity(list);
 }
 
+function short(n){n=Math.abs(n);if(n>=1e6)return(n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,"")+"M";if(n>=1e3)return(n/1e3).toFixed(n>=1e5?0:1).replace(/\.0$/,"")+"K";return String(Math.round(n))}
+function renderCalendar(list,daysIn,isCur,now){
+  var first=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),1).getDay();
+  var inD=[],outD=[];for(var i=0;i<daysIn;i++){inD.push(0);outD.push(0)}
+  list.forEach(function(t){var d=new Date(t.ts).getDate()-1;if(t.type==="credit")inD[d]+=t.amount;else outD[d]+=t.amount});
+  if(selDay===null||selDay>daysIn)selDay=isCur?now.getDate():null;
+  var html="";
+  for(var b=0;b<first;b++)html+='<div class="day blank" aria-hidden="true"></div>';
+  for(var d=1;d<=daysIn;d++){
+    var cls="day"+(isCur&&d===now.getDate()?" today":"")+(selDay===d?" sel":"");
+    html+='<button class="'+cls+'" data-day="'+d+'" aria-label="'+d+' '+viewMonth.toLocaleString("en-ZA",{month:"long"})+(inD[d-1]?", in "+money(inD[d-1]):"")+(outD[d-1]?", out "+money(outD[d-1]):"")+'"><span class="n">'+d+'</span>'+
+      (inD[d-1]?'<span class="v in">+'+short(inD[d-1])+'</span>':'')+(outD[d-1]?'<span class="v out">−'+short(outD[d-1])+'</span>':'')+'</button>';
+  }
+  var cells=first+daysIn;while(cells%7){html+='<div class="day blank" aria-hidden="true"></div>';cells++}
+  $("calGrid").innerHTML=html;
+  // selected day details
+  if(!selDay){$("dayTitle").textContent="Pick a day";$("dayTotals").textContent="";$("dayList").innerHTML='<div class="hint">Tap a day to see its transactions.</div>';return}
+  var dt=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),selDay);
+  $("dayTitle").textContent=dt.toLocaleDateString("en-ZA",{weekday:"long",day:"numeric",month:"long"});
+  var rows=list.filter(function(t){return new Date(t.ts).getDate()===selDay}).sort(function(a,b){return b.ts-a.ts});
+  $("dayTotals").innerHTML=(inD[selDay-1]?'<span style="color:var(--in)">+'+money(inD[selDay-1])+'</span> ':'')+(outD[selDay-1]?'<span style="color:var(--out)">−'+money(outD[selDay-1])+'</span>':'');
+  $("dayList").innerHTML=rows.length?rows.map(function(t){
+    var tm=new Date(t.ts).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"});
+    return '<div class="drow"><span class="ic" style="background:'+color(t.category)+'">'+esc(initials(t.merchant))+'</span><span style="min-width:0"><b>'+esc(t.merchant)+'</b><small>'+esc(t.category)+' · '+tm+'</small></span><span class="a num" style="color:'+(t.type==="credit"?"var(--in)":"var(--ink)")+'">'+(t.type==="credit"?"+":"−")+money(t.amount)+'</span></div>'}).join(""):'<div class="hint">No transactions on this day.</div>';
+}
 function renderOverview(out,spent,daysIn,isCur,now){
   var by={};out.forEach(function(t){by[t.category]=(by[t.category]||0)+t.amount});
   var rows=Object.keys(by).map(function(k){return[k,by[k]]}).sort(function(a,b){return b[1]-a[1]}),max=rows.length?rows[0][1]:0;
@@ -412,8 +474,9 @@ $("ledger").addEventListener("change",function(e){
   if(t)t.category=cat;render();
   api("api_setCategory",id,cat).then(function(){toast(t&&t.type==="debit"?t.merchant+" will go to "+cat+" from now on":"Saved")}).catch(function(err){toast("Couldn't save. "+err.message)});
 });
-$("prevM").onclick=function(){viewMonth.setMonth(viewMonth.getMonth()-1);openId=null;render()};
-$("nextM").onclick=function(){viewMonth.setMonth(viewMonth.getMonth()+1);openId=null;render()};
+$("calGrid").addEventListener("click",function(e){var c=e.target.closest("[data-day]");if(!c)return;selDay=+c.dataset.day;render()});
+$("prevM").onclick=function(){viewMonth.setMonth(viewMonth.getMonth()-1);openId=null;selDay=null;render()};
+$("nextM").onclick=function(){viewMonth.setMonth(viewMonth.getMonth()+1);openId=null;selDay=null;render()};
 $("refresh").onclick=load;
 $("budgetSave").onclick=function(){budget=Math.max(0,parseFloat($("budgetIn").value)||0);render();api("api_setBudget",budget).then(function(){toast(budget?"Budget saved":"Budget removed")}).catch(function(err){toast("Couldn't save. "+err.message)})};
 $("addBtn").onclick=function(){
