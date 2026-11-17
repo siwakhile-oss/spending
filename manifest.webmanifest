@@ -1,7 +1,7 @@
 {
   "name": "Spending",
   "short_name": "Spending",
-  "description": "Your spending, from your bank SMS.",
+  "description": "Your spending, from your bank alerts.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
