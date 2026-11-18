@@ -19,7 +19,7 @@
   --ink:#16181d; --sub:#6b7280; --faint:#9aa1ad;
   --accent:#3b5bdb; --accent-soft:#eef1fd;
   --out:#e5484d; --in:#18a058; --in-soft:#e8f6ee; --warn:#d9822b;
-  --c1:#3b5bdb; --c2:#f08c00; --c3:#1c7ed6; --c4:#e64980; --c5:#7048e8; --c6:#0ca678; --c7:#f59f00; --c8:#18a058; --c9:#d6336c; --c10:#868e96; --c11:#a0673e; --c12:#4263eb; --c13:#ae3ec9; --c14:#74b816; --c15:#5f7389; --c16:#7950f2;
+  --c1:#3b5bdb; --c2:#f08c00; --c3:#1c7ed6; --c4:#e64980; --c5:#7048e8; --c6:#0ca678; --c7:#f59f00; --c8:#18a058; --c9:#d6336c; --c10:#868e96; --c11:#a0673e; --c12:#4263eb; --c13:#ae3ec9; --c14:#74b816; --c15:#5f7389; --c16:#7950f2; --c17:#f76707;
   --icon-ink:#ffffff; color-scheme:light;
   --font:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
@@ -28,7 +28,7 @@
   --ink:#eceef2; --sub:#9aa1ad; --faint:#6b7280;
   --accent:#8ea2ff; --accent-soft:#1f2640;
   --out:#ff6b70; --in:#3ddc84; --in-soft:#15291e; --warn:#ffb057;
-  --c1:#8ea2ff; --c2:#ffa94d; --c3:#4dabf7; --c4:#f783ac; --c5:#b197fc; --c6:#38d9a9; --c7:#ffd43b; --c8:#3ddc84; --c9:#f06595; --c10:#adb5bd; --c11:#d4a373; --c12:#91a7ff; --c13:#e599f7; --c14:#a9e34b; --c15:#8fa3b8; --c16:#9775fa; --icon-ink:#0f1115;
+  --c1:#8ea2ff; --c2:#ffa94d; --c3:#4dabf7; --c4:#f783ac; --c5:#b197fc; --c6:#38d9a9; --c7:#ffd43b; --c8:#3ddc84; --c9:#f06595; --c10:#adb5bd; --c11:#d4a373; --c12:#91a7ff; --c13:#e599f7; --c14:#a9e34b; --c15:#8fa3b8; --c16:#9775fa; --c17:#ff922b; --icon-ink:#0f1115;
   color-scheme:dark}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -133,9 +133,13 @@ button{cursor:pointer}
 .drow .a{font-weight:700;font-size:.9rem}
 
 /* budget */
-.bsum{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 4px}
-.bsum span{display:block;font-size:.75rem;color:var(--sub);font-weight:500}
-.bsum b{font-size:1rem;font-weight:700}
+.bsum{display:grid;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px 16px}
+.bsum>div{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 0}
+.bsum>div+div{border-top:1px solid var(--line)}
+.bsum span{font-size:.88rem;color:var(--sub);font-weight:500}
+.bsum b{font-size:1.05rem;font-weight:700}
+.bsum>div:last-child span{color:var(--ink);font-weight:700}
+.bsum>div:last-child b{font-size:1.3rem}
 .blist{display:grid}
 .brow{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line);width:100%;border-left:0;border-right:0;border-bottom:0;background:none;text-align:left}
 .brow:first-child{border-top:0}
@@ -280,7 +284,11 @@ textarea{width:100%;min-height:110px;border:1px solid var(--line);background:var
 
   <!-- Budget -->
   <section class="panel" id="p-budget" role="tabpanel" aria-labelledby="tab-budget" hidden>
-    <div class="bsum"><div><span>Budget</span><b class="num" id="bTot">R0</b></div><div><span>Actual</span><b class="num" id="bAct">R0</b></div><div><span id="bLeftLab">Left</span><b class="num" id="bLeft">R0</b></div></div>
+    <div class="bsum"><div><span>Budgeted income</span><b class="num" id="bIncTot" style="color:var(--in)">—</b></div><div><span>Budgeted spending</span><b class="num" id="bTot">R0</b></div><div><span id="bExLab">Excess</span><b class="num" id="bEx">—</b></div></div>
+    <div class="card">
+      <div class="ctitle"><h2>Income</h2><span>budgeted vs received</span></div>
+      <div id="bInc"></div>
+    </div>
     <div class="card">
       <div class="ctitle"><h2>Budget vs actual</h2><span id="bMonth"></span></div>
       <div class="blist" id="bList"></div>
@@ -326,6 +334,12 @@ textarea{width:100%;min-height:110px;border:1px solid var(--line);background:var
         <button role="radio" id="th-light" aria-checked="true">☀ Light</button>
         <button role="radio" id="th-dark" aria-checked="false">☾ Dark</button>
       </div>
+      <span class="lab" id="colLab">Icons and progress bars</span>
+      <div class="seg" style="grid-template-columns:1fr 1fr" role="radiogroup" aria-labelledby="colLab">
+        <button role="radio" id="col-cat" aria-checked="true">By category</button>
+        <button role="radio" id="col-one" aria-checked="false">One colour</button>
+      </div>
+      <span class="hint">One colour uses the app's blue for every icon and bar. Only over-budget bars turn red.</span>
     </div>
     <div class="card">
       <label class="lab" for="budgetIn">Monthly budget</label>
@@ -357,7 +371,7 @@ textarea{width:100%;min-height:110px;border:1px solid var(--line);background:var
 <script>
 var CONN=null;try{CONN=JSON.parse(localStorage.getItem("conn")||"null")}catch(e){}
 var KEY=CONN&&CONN.key;
-var CATS=[["Rent","--c16"],["Groceries","--c1"],["Eating out","--c2"],["Transport","--c3"],["Fuel","--c7"],["Bills & utilities","--c6"],["Airtime & data","--c12"],["Subscriptions","--c5"],["Health","--c4"],["Shopping","--c9"],["Betting","--c13"],["Cash & transfers","--c10"],["Own transfers","--c14"],["Fees","--c11"],["Income","--c8"],["Other","--c15"]];
+var CATS=[["Rent","--c16"],["Groceries","--c1"],["Eating out","--c2"],["Transport","--c3"],["Fuel","--c7"],["Bills & utilities","--c6"],["Airtime & data","--c12"],["Subscriptions","--c5"],["Health","--c4"],["Shopping","--c9"],["Gifts","--c17"],["Betting","--c13"],["Cash & transfers","--c10"],["Own transfers","--c14"],["Fees","--c11"],["Income","--c8"],["Other","--c15"]];
 var COL={};CATS.forEach(function(c){COL[c[0]]=c[1]});
 var txs=[],budget=0,budgets={},bEdit=null,viewMonth=new Date(),filter="all",openId=null,delArm=null;
 viewMonth.setDate(1);
@@ -367,7 +381,8 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){retur
 function pad(n){return String(n).padStart(2,"0")}
 function ymd(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
 function initials(s){var w=String(s||"?").replace(/[^A-Za-z0-9 ]/g," ").trim().split(/\s+/);return((w[0]||"?")[0]+((w[1]||"")[0]||"")).toUpperCase()}
-function color(cat){return "var("+(COL[cat]||"--c10")+")"}
+var MONO=false;try{MONO=localStorage.getItem("mono")==="1"}catch(e){}
+function color(cat){return MONO?"var(--accent)":"var("+(COL[cat]||"--c10")+")"}
 function toast(m){var t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){t.hidden=true},2400)}
 function api(name){
   var a=[].slice.call(arguments,1),req;
@@ -427,7 +442,7 @@ function render(){
   $("balLabel").textContent=lb&&lb.account?"Balance ··"+lb.account:"Balance";
   $("sBal").textContent=lb?(lb.balance<0?"−":"")+money(lb.balance):"—";
   // budget
-  var catTotal=Object.keys(budgets).reduce(function(a,c){return a+(+budgets[c]||0)},0);
+  var catTotal=Object.keys(budgets).reduce(function(a,c){return a+(c==="Income"?0:(+budgets[c]||0))},0);
   var bud=catTotal||budget; // category budgets add up to the monthly budget; otherwise the single budget from Settings
   if(bud>0){
     var left=bud-spent,pct=Math.min(100,spent/bud*100);
@@ -437,21 +452,38 @@ function render(){
     $("mDay").innerHTML=isCur&&left>0?"<b>"+money(left/rem,true)+"</b> a day for "+rem+" days":"";
   } else {$("budgetWrap").hidden=true}
   renderOverview(out,spent,daysIn,isCur,now);
-  renderBudget(out,isCur);
+  renderBudget(out,isCur,inn);
   renderCalendar(list,daysIn,isCur,now);
   renderActivity(list);
 }
 
-function renderBudget(out,isCur){
+function renderBudget(out,isCur,inn){
   var by={};out.forEach(function(t){by[t.category]=(by[t.category]||0)+t.amount});
-  var cats=Object.keys(budgets).filter(function(c){return budgets[c]>0}).sort(function(a,b){return budgets[b]-budgets[a]});
+  var cats=Object.keys(budgets).filter(function(c){return c!=="Income"&&budgets[c]>0}).sort(function(a,b){return budgets[b]-budgets[a]});
   var tb=0,ta=0;cats.forEach(function(c){tb+=budgets[c];ta+=by[c]||0});
-  $("bTot").textContent=money(tb,true);$("bAct").textContent=money(ta,true);
-  var lft=tb-ta;$("bLeftLab").textContent=lft<0?"Over":"Left";$("bLeft").textContent=money(lft,true);$("bLeft").style.color=lft<0?"var(--out)":"var(--in)";
-  $("bMonth").textContent=viewMonth.toLocaleString("en-ZA",{month:"long"});
+  // Top: budgeted income, total of the items budgeted, and what is left over (excess)
+  var expI=+budgets.Income||0;
+  $("bIncTot").textContent=expI?money(expI,true):"—";
+  $("bTot").textContent=money(tb,true);
+  var ex=expI-tb;
+  $("bExLab").textContent=expI&&ex<0?"Short":"Excess";
+  $("bEx").textContent=expI?money(ex,true):"—";
+  $("bEx").style.color=!expI?"var(--sub)":ex<0?"var(--out)":"var(--in)";
+  var lft=tb-ta;
+  $("bMonth").innerHTML=cats.length?'Spent <b class="num">'+money(ta,true)+'</b> · '+(lft<0?'<b style="color:var(--out)">'+money(-lft,true)+' over</b>':money(lft,true)+' left'):viewMonth.toLocaleString("en-ZA",{month:"long"});
+  // Income: expected vs received, and how much of it the budgets have planned
+  var exp=+budgets.Income||0,got=(inn||[]).reduce(function(a,t){return a+t.amount},0),ih="";
+  if(exp>0){
+    var ip=Math.min(100,got/exp*100),ist=got>=exp-0.004?'<span class="done">✓ Received'+(got>exp+0.004?' · '+money(got-exp)+' extra':'')+'</span>':got>0?'<span>'+money(exp-got)+' still to come</span>':'<span>Nothing received yet</span>';
+    ih='<button class="brow" data-bcat="Income" aria-expanded="'+(bEdit==="Income")+'"><span class="ic" style="background:'+color("Income")+'">IN</span><span class="nm">Income</span><span class="av num" style="color:var(--in)">'+money(got)+' <small>of '+money(exp,true)+'</small></span><span class="bar"><i style="width:'+ip+'%;background:'+(MONO?"var(--accent)":"var(--in)")+'"></i></span><span class="st">'+ist+'<span>'+Math.round(got/exp*100)+'%</span></span></button>';
+    if(bEdit==="Income")ih+='<div class="bedit"><input class="field num" id="bEditAmt" type="number" min="0" step="100" inputmode="decimal" value="'+exp+'" aria-label="Expected income a month"><button class="btn" data-bact="save">Save</button><button class="del" data-bact="remove">Remove</button></div>';
+  } else {
+    ih='<div class="hint">Add the income you expect each month, for example your salary, to see it next to your budgets.</div><div class="inline"><input class="field num" id="bIncAmt" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 19700" aria-label="Expected income a month"><button class="btn" id="bIncBtn">Save</button></div>'+(got?'<div class="hint">Received so far this month: '+money(got)+'</div>':'');
+  }
+  $("bInc").innerHTML=ih;
   $("bList").innerHTML=cats.length?cats.map(function(c){
     var a=by[c]||0,b=budgets[c],pct=Math.min(100,a/b*100),over=a>b+0.004;
-    var fill=over?"var(--out)":pct>=90?"var(--warn)":color(c);
+    var fill=over?"var(--out)":MONO?color(c):Math.abs(a-b)<0.005?"var(--in)":pct>=90?"var(--warn)":color(c);
     var st=a===0?'<span>Nothing yet'+(isCur?'':' this month')+'</span>':over?'<span class="over">'+money(a-b)+' over</span>':Math.abs(a-b)<0.005?'<span class="done">✓ Fully used</span>':'<span>'+money(b-a)+' left</span>';
     var row='<button class="brow" data-bcat="'+esc(c)+'" aria-expanded="'+(bEdit===c)+'"><span class="ic" style="background:'+color(c)+'">'+esc(initials(c))+'</span><span class="nm">'+esc(c)+'</span><span class="av num">'+money(a)+' <small>of '+money(b,true)+'</small></span><span class="bar"><i style="width:'+pct+'%;background:'+fill+'"></i></span><span class="st">'+st+'<span>'+Math.round(a/b*100)+'%</span></span></button>';
     if(bEdit===c)row+='<div class="bedit"><input class="field num" id="bEditAmt" type="number" min="0" step="50" inputmode="decimal" value="'+b+'" aria-label="Budget for '+esc(c)+'"><button class="btn" data-bact="save">Save</button><button class="del" data-bact="remove">Remove</button></div>';
@@ -468,11 +500,12 @@ function saveCatBudget(c,v){
   v=Math.max(0,parseFloat(v)||0);
   if(v>0)budgets[c]=v;else delete budgets[c];
   bEdit=null;render();
-  api("api_setCatBudget",c,v).then(function(){toast(v>0?c+" budget: "+money(v,true)+" a month":c+" budget removed")}).catch(function(err){toast("Couldn't save. "+err.message);load()});
+  api("api_setCatBudget",c,v).then(function(){toast(c==="Income"?(v>0?"Expected income: "+money(v,true)+" a month":"Expected income removed"):v>0?c+" budget: "+money(v,true)+" a month":c+" budget removed")}).catch(function(err){toast("Couldn't save. "+err.message);load()});
 }
 $("p-budget").addEventListener("click",function(e){
   var r=e.target.closest("[data-bcat]");if(r){bEdit=bEdit===r.dataset.bcat?null:r.dataset.bcat;render();if(bEdit){var f=$("bEditAmt");if(f){f.focus();f.select()}}return}
   var act=e.target.closest("[data-bact]");if(act&&bEdit){saveCatBudget(bEdit,act.dataset.bact==="remove"?0:$("bEditAmt").value);return}
+  if(e.target.closest("#bIncBtn")){var v=parseFloat($("bIncAmt").value);if(!(v>0)){toast("Enter an amount");return}saveCatBudget("Income",v);return}
   var add=e.target.closest("[data-badd]");if(add){$("bAddCat").value=add.dataset.badd;$("bAddAmt").focus();return}
 });
 $("bAddBtn").onclick=function(){var c=$("bAddCat").value,v=parseFloat($("bAddAmt").value);if(!c){return}if(!(v>0)){toast("Enter an amount");return}$("bAddAmt").value="";saveCatBudget(c,v)};
@@ -605,6 +638,13 @@ function setTheme(t,save){
   var tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.setAttribute("content",t==="dark"?"#0f1115":"#f7f8fa");
   if(save){try{localStorage.setItem("theme",t)}catch(e){}}
 }
+function setMono(on,save){
+  MONO=on;$("col-cat").setAttribute("aria-checked",!on);$("col-one").setAttribute("aria-checked",on);
+  if(save){try{localStorage.setItem("mono",on?"1":"0")}catch(e){}render()}
+}
+$("col-cat").onclick=function(){setMono(false,true)};
+$("col-one").onclick=function(){setMono(true,true)};
+setMono(MONO,false);
 $("th-light").onclick=function(){setTheme("light",true)};
 $("th-dark").onclick=function(){setTheme("dark",true)};
 $("themeBtn").onclick=function(){setTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark",true)};
