@@ -154,9 +154,29 @@ button{cursor:pointer}
 .st .done{color:var(--in);font-weight:600}
 .bedit{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0 0 12px 46px}
 .bedit .field{flex:1;min-width:120px}
+.brow .nm small.bcat{display:block;font-size:.75rem;font-weight:500;color:var(--faint);margin-top:1px}
+.brow .ic{align-self:start;margin-top:2px}
+.bopen{display:grid;gap:10px;padding:0 0 14px 46px}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bopen .inline .field{flex:1;min-width:0}
+.btx{display:grid;grid-template-columns:1fr auto auto;gap:4px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:.88rem}
+.btx:first-child{border-top:0}
+.btx>span:first-child{min-width:0}
+.btx b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btx small{color:var(--faint);font-size:.75rem}
+.btx .mini{grid-column:1/-1;padding:6px 8px;font-size:.82rem}
+#bUn .btx{grid-template-columns:1fr auto}
+.panel>*,.card>*,.bopen>*{min-width:0}
+select.field{max-width:100%;min-width:0;text-overflow:ellipsis}
+.bopen select.field,.btx select.field{width:100%}
+.more .row select[data-act="line"]{flex:1 1 100%;width:100%}
 .uncat{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:.88rem}
 .uncat:first-child{border-top:0}
 .linkbtn{border:0;background:none;color:var(--accent);font-weight:600;font-size:.82rem;padding:4px 0}
+
+/* icons: soft tinted tile, coloured symbol */
+.ic{--ic:var(--c10);background:var(--soft);background:color-mix(in srgb,var(--ic) 18%,transparent);color:var(--ic)!important}
+.ic svg{width:58%;height:58%}
 
 /* categories */
 .cats{display:grid;gap:12px}
@@ -294,13 +314,14 @@ textarea{width:100%;min-height:110px;border:1px solid var(--line);background:var
       <div class="blist" id="bList"></div>
     </div>
     <div class="card" id="bUnCard" hidden>
-      <div class="ctitle"><h2>Spent without a budget</h2><span>this month</span></div>
+      <div class="ctitle"><h2>Not on a budget</h2><span>this month</span></div>
       <div id="bUn"></div>
     </div>
     <div class="card">
-      <span class="lab" id="bAddLab">Add a budget</span>
-      <div class="inline" style="flex-wrap:wrap"><select class="field" id="bAddCat" aria-labelledby="bAddLab" style="flex:1;min-width:140px"></select><input class="field num" id="bAddAmt" type="number" min="0" step="50" inputmode="decimal" placeholder="Amount a month" aria-label="Amount a month" style="flex:1;min-width:120px"><button class="btn" id="bAddBtn">Add</button></div>
-      <span class="hint">Budgets repeat every month. Tap a budget above to change or remove it.</span>
+      <span class="lab" id="bAddLab">Add a budget line</span>
+      <input class="field" id="bAddName" placeholder="Name, e.g. CV - Vivo" aria-label="Name">
+      <div class="inline" style="flex-wrap:wrap"><select class="field" id="bAddCat" aria-label="Category" style="flex:1;min-width:140px"></select><input class="field num" id="bAddAmt" type="number" min="0" step="50" inputmode="decimal" placeholder="Amount a month" aria-label="Amount a month" style="flex:1;min-width:110px"><button class="btn" id="bAddBtn">Add</button></div>
+      <span class="hint">Budgets repeat every month. Tap a line above to change it, or to see and move the transactions on it.</span>
     </div>
   </section>
 
@@ -373,7 +394,7 @@ var CONN=null;try{CONN=JSON.parse(localStorage.getItem("conn")||"null")}catch(e)
 var KEY=CONN&&CONN.key;
 var CATS=[["Rent","--c16"],["Groceries","--c1"],["Eating out","--c2"],["Transport","--c3"],["Fuel","--c7"],["Bills & utilities","--c6"],["Airtime & data","--c12"],["Subscriptions","--c5"],["Health","--c4"],["Shopping","--c9"],["Gifts","--c17"],["Betting","--c13"],["Cash & transfers","--c10"],["Own transfers","--c14"],["Fees","--c11"],["Income","--c8"],["Other","--c15"]];
 var COL={};CATS.forEach(function(c){COL[c[0]]=c[1]});
-var txs=[],budget=0,budgets={},bEdit=null,viewMonth=new Date(),filter="all",openId=null,delArm=null;
+var txs=[],budget=0,budgets={},lines=[],bEdit=null,viewMonth=new Date(),filter="all",openId=null,delArm=null;
 viewMonth.setDate(1);
 function $(id){return document.getElementById(id)}
 function money(n,whole){var v=Math.abs(n)||0;return "R"+v.toLocaleString("en-US",{minimumFractionDigits:whole?0:2,maximumFractionDigits:whole?0:2})}
@@ -381,6 +402,27 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){retur
 function pad(n){return String(n).padStart(2,"0")}
 function ymd(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
 function initials(s){var w=String(s||"?").replace(/[^A-Za-z0-9 ]/g," ").trim().split(/\s+/);return((w[0]||"?")[0]+((w[1]||"")[0]||"")).toUpperCase()}
+/* Category icons (24×24 line drawings) */
+var ICONS={
+  "Rent":'<path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v11h13V9"/><path d="M10 20v-5h4v5"/>',
+  "Groceries":'<path d="M3 4h2.2l2.2 10.3a1.5 1.5 0 0 0 1.5 1.2h7.6a1.5 1.5 0 0 0 1.5-1.1L20 7.5H6"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="16.5" cy="19.5" r="1.3"/>',
+  "Eating out":'<path d="M7 3v18"/><path d="M4.5 3v5.5a2.5 2.5 0 0 0 5 0V3"/><path d="M17.5 21V3c-2.2 1.3-3.3 3.6-3.3 6.6V13h3.3"/>',
+  "Transport":'<path d="M5 16.5V12l2-5.5h10l2 5.5v4.5z"/><path d="M5 12h14"/><path d="M7.5 16.5v2.5M16.5 16.5v2.5"/><circle cx="8.5" cy="14.3" r=".6" fill="currentColor"/><circle cx="15.5" cy="14.3" r=".6" fill="currentColor"/>',
+  "Fuel":'<path d="M5 20V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v15"/><path d="M4 20h11M5 10h9"/><path d="M14 8.5 17 11v5.5a1.5 1.5 0 0 0 3 0V9l-2.5-2.5"/>',
+  "Bills & utilities":'<path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/>',
+  "Airtime & data":'<rect x="7" y="3" width="10" height="18" rx="2.2"/><path d="M11 17.5h2"/>',
+  "Subscriptions":'<path d="M4 11V9.5A4.5 4.5 0 0 1 8.5 5H19"/><path d="m16 2 3 3-3 3"/><path d="M20 13v1.5a4.5 4.5 0 0 1-4.5 4.5H5"/><path d="m8 22-3-3 3-3"/>',
+  "Health":'<path d="M12 20.5s-7.5-4.4-7.5-10A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 2.5c0 5.6-7.5 10-7.5 10z"/><path d="M12 11v4M10 13h4"/>',
+  "Shopping":'<path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 10V6.5a3 3 0 0 1 6 0V10"/>',
+  "Gifts":'<rect x="4" y="11" width="16" height="9" rx="1"/><rect x="3" y="7.5" width="18" height="3.5" rx="1"/><path d="M12 7.5V20"/><path d="M12 7.5C10.5 4 7.2 3.6 7.2 5.8c0 1.6 2.6 1.7 4.8 1.7zM12 7.5c1.5-3.5 4.8-3.9 4.8-1.7 0 1.6-2.6 1.7-4.8 1.7z"/>',
+  "Betting":'<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
+  "Cash & transfers":'<path d="M21 3 3 10.5l7.2 2.8L13 20.5z"/><path d="M10.2 13.3 21 3"/>',
+  "Own transfers":'<path d="M5 8h13l-3.5-3.5"/><path d="M19 16H6l3.5 3.5"/>',
+  "Fees":'<path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  "Income":'<path d="M12 3v11"/><path d="m7.5 9.5 4.5 4.5 4.5-4.5"/><path d="M4 16v4h16v-4"/>',
+  "Other":'<circle cx="6" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="18" cy="12" r="1.3" fill="currentColor"/>'
+};
+function icon(cat){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[cat]||ICONS.Other)+'</svg>'}
 var MONO=false;try{MONO=localStorage.getItem("mono")==="1"}catch(e){}
 function color(cat){return MONO?"var(--accent)":"var("+(COL[cat]||"--c10")+")"}
 function toast(m){var t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){t.hidden=true},2400)}
@@ -389,7 +431,7 @@ function api(name){
   if(!CONN)return Promise.reject(new Error("Not connected"));
   if(name==="api_getData")req=fetch(CONN.url+"?api=data&key="+encodeURIComponent(KEY),{cache:"no-store"});
   else{
-    var body={api_setCategory:{action:"setCategory",id:a[0],category:a[1]},api_delete:{action:"delete",id:a[0]},api_setBudget:{action:"setBudget",amount:a[0]},api_setCatBudget:{action:"setCatBudget",category:a[0],amount:a[1]},api_addText:{action:"addText",text:a[0]}}[name];
+    var body={api_setCategory:{action:"setCategory",id:a[0],category:a[1]},api_delete:{action:"delete",id:a[0]},api_setBudget:{action:"setBudget",amount:a[0]},api_setCatBudget:{action:"setCatBudget",category:a[0],amount:a[1]},api_setLines:{action:"setLines",lines:a[0]},api_setTxLine:{action:"setTxLine",id:a[0],line:a[1]},api_addText:{action:"addText",text:a[0]}}[name];
     req=fetch(CONN.url+"?key="+encodeURIComponent(KEY),{method:"POST",body:JSON.stringify(body)});
   }
   return req.then(function(r){if(!r.ok)throw new Error("Google didn't answer ("+r.status+"). Try again in a moment.");return r.json()},function(){throw new Error("No internet connection.")})
@@ -400,7 +442,7 @@ var loading=false;
 function load(){
   if(loading)return;loading=true;
   $("refresh").classList.add("spin");
-  api("api_getData").then(function(d){txs=d.tx;budget=d.budget;budgets=d.budgets||{};try{localStorage.setItem("cache",JSON.stringify({tx:d.tx,budget:d.budget,budgets:budgets,at:Date.now()}))}catch(e){}$("budgetIn").value=budget||"";$("statusNote").hidden=true;render()})
+  api("api_getData").then(function(d){txs=d.tx;budget=d.budget;budgets=d.budgets||{};lines=d.lines||[];try{localStorage.setItem("cache",JSON.stringify({tx:d.tx,budget:d.budget,budgets:budgets,lines:lines,at:Date.now()}))}catch(e){}$("budgetIn").value=budget||"";$("statusNote").hidden=true;render()})
   .catch(function(e){$("statusNote").hidden=false;$("statusNote").textContent=(txs.length?"Showing your last saved data. ":"Couldn't load your transactions. ")+e.message})
   .then(function(){loading=false;$("refresh").classList.remove("spin")});
 }
@@ -423,7 +465,7 @@ document.querySelector("#bottomNav .in").addEventListener("keydown",function(e){
 });
 
 function render(){
-  if(CONN){try{localStorage.setItem("cache",JSON.stringify({tx:txs,budget:budget,budgets:budgets,at:Date.now()}))}catch(e){}}
+  if(CONN){try{localStorage.setItem("cache",JSON.stringify({tx:txs,budget:budget,budgets:budgets,lines:lines,at:Date.now()}))}catch(e){}}
   var now=new Date(),isCur=viewMonth.getFullYear()===now.getFullYear()&&viewMonth.getMonth()===now.getMonth();
   $("monthLabel").textContent=viewMonth.toLocaleString("en-ZA",{month:"long",year:"numeric"});
   $("nextM").disabled=isCur;
@@ -442,7 +484,7 @@ function render(){
   $("balLabel").textContent=lb&&lb.account?"Balance ··"+lb.account:"Balance";
   $("sBal").textContent=lb?(lb.balance<0?"−":"")+money(lb.balance):"—";
   // budget
-  var catTotal=Object.keys(budgets).reduce(function(a,c){return a+(c==="Income"?0:(+budgets[c]||0))},0);
+  var catTotal=budgetTotal();
   var bud=catTotal||budget; // category budgets add up to the monthly budget; otherwise the single budget from Settings
   if(bud>0){
     var left=bud-spent,pct=Math.min(100,spent/bud*100);
@@ -457,10 +499,24 @@ function render(){
   renderActivity(list);
 }
 
+/* Budget rows: named lines (e.g. "CV - Vivo" in Bills & utilities) plus any whole-category budgets without lines */
+function lineById(id){return lines.filter(function(l){return l.id===id})[0]||null}
+function onLine(t){return t.line&&lineById(t.line)?t.line:""}
+function catOnly(){var lc={};lines.forEach(function(l){lc[l.cat]=1});return Object.keys(budgets).filter(function(c){return c!=="Income"&&budgets[c]>0&&!lc[c]})}
+function budgetRows(){
+  var order={};CATS.forEach(function(c,i){order[c[0]]=i});
+  var rows=lines.filter(function(l){return l.amount>0}).map(function(l){return{key:"line:"+l.id,line:l,name:l.name,cat:l.cat,amount:l.amount}})
+    .concat(catOnly().map(function(c){return{key:"cat:"+c,line:null,name:c,cat:c,amount:budgets[c]}}));
+  return rows.sort(function(a,b){return((order[a.cat]==null?99:order[a.cat])-(order[b.cat]==null?99:order[b.cat]))||(b.amount-a.amount)});
+}
+function budgetTotal(){return budgetRows().reduce(function(a,r){return a+r.amount},0)}
+function rowTx(r,out){return out.filter(function(t){return r.line?onLine(t)===r.line.id:(!onLine(t)&&t.category===r.cat)})}
+function lineOptions(sel){
+  return '<option value="">'+(sel?'Take off budget line':'Move to a budget line…')+'</option>'+budgetRows().filter(function(r){return r.line}).map(function(r){return '<option value="'+esc(r.line.id)+'"'+(r.line.id===sel?' selected':'')+'>'+esc(r.name)+' · '+esc(r.cat)+'</option>'}).join("");
+}
 function renderBudget(out,isCur,inn){
-  var by={};out.forEach(function(t){by[t.category]=(by[t.category]||0)+t.amount});
-  var cats=Object.keys(budgets).filter(function(c){return c!=="Income"&&budgets[c]>0}).sort(function(a,b){return budgets[b]-budgets[a]});
-  var tb=0,ta=0;cats.forEach(function(c){tb+=budgets[c];ta+=by[c]||0});
+  var rows=budgetRows(),co={};catOnly().forEach(function(c){co[c]=1});
+  var tb=0,ta=0;rows.forEach(function(r){r.tx=rowTx(r,out);r.actual=r.tx.reduce(function(a,t){return a+t.amount},0);tb+=r.amount;ta+=r.actual});
   // Top: budgeted income, total of the items budgeted, and what is left over (excess)
   var expI=+budgets.Income||0;
   $("bIncTot").textContent=expI?money(expI,true):"—";
@@ -470,45 +526,96 @@ function renderBudget(out,isCur,inn){
   $("bEx").textContent=expI?money(ex,true):"—";
   $("bEx").style.color=!expI?"var(--sub)":ex<0?"var(--out)":"var(--in)";
   var lft=tb-ta;
-  $("bMonth").innerHTML=cats.length?'Spent <b class="num">'+money(ta,true)+'</b> · '+(lft<0?'<b style="color:var(--out)">'+money(-lft,true)+' over</b>':money(lft,true)+' left'):viewMonth.toLocaleString("en-ZA",{month:"long"});
-  // Income: expected vs received, and how much of it the budgets have planned
-  var exp=+budgets.Income||0,got=(inn||[]).reduce(function(a,t){return a+t.amount},0),ih="";
+  $("bMonth").innerHTML=rows.length?'Spent <b class="num">'+money(ta,true)+'</b> · '+(lft<0?'<b style="color:var(--out)">'+money(-lft,true)+' over</b>':money(lft,true)+' left'):viewMonth.toLocaleString("en-ZA",{month:"long"});
+  // Income: budgeted vs received
+  var exp=expI,got=(inn||[]).reduce(function(a,t){return a+t.amount},0),ih="";
   if(exp>0){
     var ip=Math.min(100,got/exp*100),ist=got>=exp-0.004?'<span class="done">✓ Received'+(got>exp+0.004?' · '+money(got-exp)+' extra':'')+'</span>':got>0?'<span>'+money(exp-got)+' still to come</span>':'<span>Nothing received yet</span>';
-    ih='<button class="brow" data-bcat="Income" aria-expanded="'+(bEdit==="Income")+'"><span class="ic" style="background:'+color("Income")+'">IN</span><span class="nm">Income</span><span class="av num" style="color:var(--in)">'+money(got)+' <small>of '+money(exp,true)+'</small></span><span class="bar"><i style="width:'+ip+'%;background:'+(MONO?"var(--accent)":"var(--in)")+'"></i></span><span class="st">'+ist+'<span>'+Math.round(got/exp*100)+'%</span></span></button>';
-    if(bEdit==="Income")ih+='<div class="bedit"><input class="field num" id="bEditAmt" type="number" min="0" step="100" inputmode="decimal" value="'+exp+'" aria-label="Expected income a month"><button class="btn" data-bact="save">Save</button><button class="del" data-bact="remove">Remove</button></div>';
+    ih='<button class="brow" data-bkey="Income" aria-expanded="'+(bEdit==="Income")+'"><span class="ic" style="--ic:'+color("Income")+'">'+icon("Income")+'</span><span class="nm">Income</span><span class="av num" style="color:var(--in)">'+money(got)+' <small>of '+money(exp,true)+'</small></span><span class="bar"><i style="width:'+ip+'%;background:'+(MONO?"var(--accent)":"var(--in)")+'"></i></span><span class="st">'+ist+'<span>'+Math.round(got/exp*100)+'%</span></span></button>';
+    if(bEdit==="Income")ih+='<div class="bedit"><input class="field num" id="bEditAmt" type="number" min="0" step="100" inputmode="decimal" value="'+exp+'" aria-label="Budgeted income a month"><button class="btn" data-bact="save">Save</button><button class="del" data-bact="remove">Remove</button></div>';
   } else {
-    ih='<div class="hint">Add the income you expect each month, for example your salary, to see it next to your budgets.</div><div class="inline"><input class="field num" id="bIncAmt" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 19700" aria-label="Expected income a month"><button class="btn" id="bIncBtn">Save</button></div>'+(got?'<div class="hint">Received so far this month: '+money(got)+'</div>':'');
+    ih='<div class="hint">Add the income you expect each month, for example your salary, to see it next to your budgets.</div><div class="inline"><input class="field num" id="bIncAmt" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 19700" aria-label="Budgeted income a month"><button class="btn" id="bIncBtn">Save</button></div>'+(got?'<div class="hint">Received so far this month: '+money(got)+'</div>':'');
   }
   $("bInc").innerHTML=ih;
-  $("bList").innerHTML=cats.length?cats.map(function(c){
-    var a=by[c]||0,b=budgets[c],pct=Math.min(100,a/b*100),over=a>b+0.004;
-    var fill=over?"var(--out)":MONO?color(c):Math.abs(a-b)<0.005?"var(--in)":pct>=90?"var(--warn)":color(c);
-    var st=a===0?'<span>Nothing yet'+(isCur?'':' this month')+'</span>':over?'<span class="over">'+money(a-b)+' over</span>':Math.abs(a-b)<0.005?'<span class="done">✓ Fully used</span>':'<span>'+money(b-a)+' left</span>';
-    var row='<button class="brow" data-bcat="'+esc(c)+'" aria-expanded="'+(bEdit===c)+'"><span class="ic" style="background:'+color(c)+'">'+esc(initials(c))+'</span><span class="nm">'+esc(c)+'</span><span class="av num">'+money(a)+' <small>of '+money(b,true)+'</small></span><span class="bar"><i style="width:'+pct+'%;background:'+fill+'"></i></span><span class="st">'+st+'<span>'+Math.round(a/b*100)+'%</span></span></button>';
-    if(bEdit===c)row+='<div class="bedit"><input class="field num" id="bEditAmt" type="number" min="0" step="50" inputmode="decimal" value="'+b+'" aria-label="Budget for '+esc(c)+'"><button class="btn" data-bact="save">Save</button><button class="del" data-bact="remove">Remove</button></div>';
-    return row;
+  // Spending this month that isn't on any budget line or category budget
+  var loose=out.filter(function(t){return !onLine(t)&&!co[t.category]}).sort(function(a,b){return b.ts-a.ts});
+  var catOpts=CATS.filter(function(c){return c[0]!=="Income"}).map(function(c){return c[0]});
+  $("bList").innerHTML=rows.length?rows.map(function(r){
+    var a=r.actual,b=r.amount,pct=Math.min(100,a/b*100),over=a>b+0.004,full=Math.abs(a-b)<0.005;
+    var fill=over?"var(--out)":MONO?color(r.cat):full?"var(--in)":pct>=90?"var(--warn)":color(r.cat);
+    var st=a===0?'<span>Nothing yet</span>':over?'<span class="over">'+money(a-b)+' over</span>':full?'<span class="done">✓ Fully used</span>':'<span>'+money(b-a)+' left</span>';
+    var open=bEdit===r.key;
+    var h='<button class="brow" data-bkey="'+esc(r.key)+'" aria-expanded="'+open+'"><span class="ic" style="--ic:'+color(r.cat)+'">'+icon(r.cat)+'</span><span class="nm">'+esc(r.name)+(r.line?(r.name.toLowerCase()===r.cat.toLowerCase()?'':'<small class="bcat">'+esc(r.cat)+'</small>'):'<small class="bcat">Whole category</small>')+'</span><span class="av num">'+money(a)+' <small>of '+money(b,true)+'</small></span><span class="bar"><i style="width:'+pct+'%;background:'+fill+'"></i></span><span class="st">'+st+'<span>'+Math.round(a/b*100)+'%</span></span></button>';
+    if(open){
+      h+='<div class="bopen">';
+      if(r.line)h+='<div class="bgrid"><input class="field" id="bEditName" value="'+esc(r.name)+'" aria-label="Name"><select class="field" id="bEditCat" aria-label="Category">'+catOpts.map(function(c){return'<option'+(c===r.cat?' selected':'')+'>'+esc(c)+'</option>'}).join("")+'</select></div>';
+      h+='<div class="inline"><input class="field num" id="bEditAmt" type="number" min="0" step="50" inputmode="decimal" value="'+b+'" aria-label="Amount a month"><button class="btn" data-bact="save">Save</button><button class="del" data-bact="remove">Remove</button></div>';
+      if(r.line){
+        h+='<span class="lab">On this line in '+esc(viewMonth.toLocaleString("en-ZA",{month:"long"}))+'</span>';
+        h+=r.tx.length?r.tx.sort(function(x,y){return y.ts-x.ts}).map(function(t){return '<div class="btx"><span><b>'+esc(t.merchant)+'</b><small>'+new Date(t.ts).toLocaleDateString("en-ZA",{day:"numeric",month:"short"})+'</small></span><span class="num">'+money(t.amount)+'</span><button class="linkbtn" data-unassign="'+esc(t.id)+'" aria-label="Take '+esc(t.merchant)+' off this line">Take off</button></div>'}).join(""):'<div class="hint">Nothing on this line yet.</div>';
+        var cand=out.filter(function(t){return onLine(t)!==r.line.id}).sort(function(x,y){return(x.category===r.cat?0:1)-(y.category===r.cat?0:1)||y.ts-x.ts});
+        if(cand.length)h+='<select class="field" data-addto="'+esc(r.line.id)+'" aria-label="Add a transaction to '+esc(r.name)+'"><option value="">+ Add a transaction from this month…</option>'+cand.map(function(t){var cur=onLine(t)?lineById(t.line).name:t.category;return '<option value="'+esc(t.id)+'">'+esc(t.merchant)+' · '+money(t.amount)+' · '+new Date(t.ts).toLocaleDateString("en-ZA",{day:"numeric",month:"short"})+' ('+esc(cur)+')</option>'}).join("")+'</select>';
+      } else {
+        h+='<div class="hint">This budget covers everything in '+esc(r.cat)+'. Add named lines below to split it up.</div>';
+      }
+      h+='</div>';
+    }
+    return h;
   }).join(""):'<div class="empty"><b>No budgets yet</b>Add one below, for example Rent.</div>';
-  var un=Object.keys(by).filter(function(c){return !(budgets[c]>0)}).sort(function(a,b){return by[b]-by[a]});
-  $("bUnCard").hidden=!un.length||!cats.length;
-  $("bUn").innerHTML=un.map(function(c){return '<div class="uncat"><span>'+esc(c)+' · <b class="num">'+money(by[c])+'</b></span><button class="linkbtn" data-badd="'+esc(c)+'">Set budget</button></div>'}).join("");
-  var free=CATS.map(function(c){return c[0]}).filter(function(c){return c!=="Income"&&!(budgets[c]>0)});
+  $("bUnCard").hidden=!loose.length||!rows.length;
+  $("bUn").innerHTML=loose.map(function(t){return '<div class="btx"><span><b>'+esc(t.merchant)+'</b><small>'+esc(t.category)+' · '+new Date(t.ts).toLocaleDateString("en-ZA",{day:"numeric",month:"short"})+'</small></span><span class="num">'+money(t.amount)+'</span><select class="field mini" data-assign="'+esc(t.id)+'" aria-label="Move '+esc(t.merchant)+' to a budget line">'+lineOptions("")+'</select></div>'}).join("");
   var keep=$("bAddCat").value;
-  $("bAddCat").innerHTML=free.map(function(c){return '<option'+(c===keep?' selected':'')+'>'+esc(c)+'</option>'}).join("");
+  $("bAddCat").innerHTML=catOpts.map(function(c){return '<option'+(c===keep?' selected':'')+'>'+esc(c)+'</option>'}).join("");
+}
+function newId(){return "L"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function saveLines(msg){
+  render();
+  api("api_setLines",lines).then(function(){if(msg)toast(msg)}).catch(function(err){toast("Couldn't save. "+err.message);load()});
 }
 function saveCatBudget(c,v){
   v=Math.max(0,parseFloat(v)||0);
   if(v>0)budgets[c]=v;else delete budgets[c];
   bEdit=null;render();
-  api("api_setCatBudget",c,v).then(function(){toast(c==="Income"?(v>0?"Expected income: "+money(v,true)+" a month":"Expected income removed"):v>0?c+" budget: "+money(v,true)+" a month":c+" budget removed")}).catch(function(err){toast("Couldn't save. "+err.message);load()});
+  api("api_setCatBudget",c,v).then(function(){toast(c==="Income"?(v>0?"Budgeted income: "+money(v,true)+" a month":"Budgeted income removed"):v>0?c+" budget: "+money(v,true)+" a month":c+" budget removed")}).catch(function(err){toast("Couldn't save. "+err.message);load()});
+}
+/* Put a transaction on a budget line ("" takes it off). It also moves to the line's category. */
+function assignTx(id,lineId){
+  var t=txs.filter(function(x){return x.id===id})[0];if(!t)return;
+  var L=lineId?lineById(lineId):null,prev=onLine(t)?lineById(t.line):null;
+  t.line=L?L.id:"";if(L)t.category=L.cat;render();
+  api("api_setTxLine",id,L?L.id:"").then(function(r){
+    if(L)toast(t.merchant+" → "+L.name+(r&&r.byAmount?". Future "+t.merchant+"s of "+money(t.amount)+" will go here too":". Future "+t.merchant+" payments will go here too"));
+    else toast("Taken off "+(prev?prev.name:"the budget line"));
+  }).catch(function(err){toast("Couldn't move it. "+err.message);load()});
 }
 $("p-budget").addEventListener("click",function(e){
-  var r=e.target.closest("[data-bcat]");if(r){bEdit=bEdit===r.dataset.bcat?null:r.dataset.bcat;render();if(bEdit){var f=$("bEditAmt");if(f){f.focus();f.select()}}return}
-  var act=e.target.closest("[data-bact]");if(act&&bEdit){saveCatBudget(bEdit,act.dataset.bact==="remove"?0:$("bEditAmt").value);return}
-  if(e.target.closest("#bIncBtn")){var v=parseFloat($("bIncAmt").value);if(!(v>0)){toast("Enter an amount");return}saveCatBudget("Income",v);return}
-  var add=e.target.closest("[data-badd]");if(add){$("bAddCat").value=add.dataset.badd;$("bAddAmt").focus();return}
+  var r=e.target.closest("[data-bkey]");if(r){bEdit=bEdit===r.dataset.bkey?null:r.dataset.bkey;render();return}
+  var un=e.target.closest("[data-unassign]");if(un){assignTx(un.dataset.unassign,"");return}
+  var act=e.target.closest("[data-bact]");
+  if(act&&bEdit){
+    var rm=act.dataset.bact==="remove",v=rm?0:parseFloat($("bEditAmt").value)||0;
+    if(bEdit==="Income"){saveCatBudget("Income",v);return}
+    if(bEdit.indexOf("cat:")===0){saveCatBudget(bEdit.slice(4),v);return}
+    var L=lineById(bEdit.slice(5));if(!L)return;
+    if(rm||!(v>0)){lines=lines.filter(function(x){return x!==L});bEdit=null;saveLines(L.name+" removed");return}
+    L.name=($("bEditName").value||"").trim()||L.name;L.cat=$("bEditCat").value||L.cat;L.amount=v;
+    txs.forEach(function(t){if(t.line===L.id)t.category=L.cat});
+    bEdit=null;saveLines(L.name+": "+money(v,true)+" a month");return;
+  }
+  if(e.target.closest("#bIncBtn")){var iv=parseFloat($("bIncAmt").value);if(!(iv>0)){toast("Enter an amount");return}saveCatBudget("Income",iv);return}
 });
-$("bAddBtn").onclick=function(){var c=$("bAddCat").value,v=parseFloat($("bAddAmt").value);if(!c){return}if(!(v>0)){toast("Enter an amount");return}$("bAddAmt").value="";saveCatBudget(c,v)};
+$("p-budget").addEventListener("change",function(e){
+  var s=e.target;
+  if(s.dataset.assign!==undefined&&s.value){assignTx(s.dataset.assign,s.value);return}
+  if(s.dataset.addto&&s.value){assignTx(s.value,s.dataset.addto);return}
+});
+$("bAddBtn").onclick=function(){
+  var n=($("bAddName").value||"").trim(),c=$("bAddCat").value,v=parseFloat($("bAddAmt").value);
+  if(!(v>0)){toast("Enter an amount");return}
+  lines.push({id:newId(),name:n||c,cat:c,amount:v});
+  $("bAddName").value="";$("bAddAmt").value="";
+  saveLines((n||c)+": "+money(v,true)+" a month");
+};
 function short(n){n=Math.abs(n);if(n>=1e6)return(n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,"")+"M";if(n>=1e3)return(n/1e3).toFixed(n>=1e5?0:1).replace(/\.0$/,"")+"K";return String(Math.round(n))}
 function renderCalendar(list,daysIn,isCur,now){
   var first=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),1).getDay();
@@ -534,13 +641,13 @@ function renderCalendar(list,daysIn,isCur,now){
   $("dayTotals").innerHTML=(inD[selDay-1]?'<span style="color:var(--in)">+'+money(inD[selDay-1])+'</span> ':'')+(outD[selDay-1]?'<span style="color:var(--out)">−'+money(outD[selDay-1])+'</span>':'');
   $("dayList").innerHTML=rows.length?rows.map(function(t){
     var tm=new Date(t.ts).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"});
-    return '<div class="drow"><span class="ic" style="background:'+color(t.category)+'">'+esc(initials(t.merchant))+'</span><span style="min-width:0"><b>'+esc(t.merchant)+'</b><small>'+esc(t.category)+' · '+tm+'</small></span><span class="a num" style="color:'+(t.type==="credit"?"var(--in)":"var(--ink)")+'">'+(t.type==="credit"?"+":"−")+money(t.amount)+'</span></div>'}).join(""):'<div class="hint">No transactions on this day.</div>';
+    return '<div class="drow"><span class="ic" style="--ic:'+color(t.category)+'">'+icon(t.category)+'</span><span style="min-width:0"><b>'+esc(t.merchant)+'</b><small>'+esc(t.category)+' · '+tm+'</small></span><span class="a num" style="color:'+(t.type==="credit"?"var(--in)":"var(--ink)")+'">'+(t.type==="credit"?"+":"−")+money(t.amount)+'</span></div>'}).join(""):'<div class="hint">No transactions on this day.</div>';
 }
 function renderOverview(out,spent,daysIn,isCur,now){
   var by={};out.forEach(function(t){by[t.category]=(by[t.category]||0)+t.amount});
   var rows=Object.keys(by).map(function(k){return[k,by[k]]}).sort(function(a,b){return b[1]-a[1]}),max=rows.length?rows[0][1]:0;
   $("cats").innerHTML=rows.length?rows.map(function(r){
-    return '<button class="cat" data-cat="'+esc(r[0])+'"><span class="ic" style="background:'+color(r[0])+'">'+esc(initials(r[0]))+'</span><span class="nm">'+esc(r[0])+'</span><span class="amt num">'+money(r[1])+'<span class="pct">'+(spent?Math.round(r[1]/spent*100):0)+'%</span></span><span class="bar"><i style="width:'+(max?r[1]/max*100:0)+'%;background:'+color(r[0])+'"></i></span></button>'
+    return '<button class="cat" data-cat="'+esc(r[0])+'"><span class="ic" style="--ic:'+color(r[0])+'">'+icon(r[0])+'</span><span class="nm">'+esc(r[0])+'</span><span class="amt num">'+money(r[1])+'<span class="pct">'+(spent?Math.round(r[1]/spent*100):0)+'%</span></span><span class="bar"><i style="width:'+(max?r[1]/max*100:0)+'%;background:'+color(r[0])+'"></i></span></button>'
   }).join(""):'<div class="empty"><b>No spending yet this month</b>New bank alerts appear here automatically.</div>';
   var per=[];for(var i=0;i<daysIn;i++)per.push(0);out.forEach(function(t){per[new Date(t.ts).getDate()-1]+=t.amount});
   var dmax=Math.max.apply(null,per.concat([0]));
@@ -576,9 +683,9 @@ function renderActivity(list){
     var d=new Date(t.ts),k=ymd(d);
     if(k!==day){day=k;html+='<div class="dh"><span>'+d.toLocaleDateString("en-ZA",{weekday:"short",day:"numeric",month:"short"})+'</span><span class="num">'+(tot[k]?"−"+money(tot[k]):"")+'</span></div>'}
     var open=openId===t.id;
-    html+='<div class="tx" data-id="'+esc(t.id)+'"><button class="txr" aria-expanded="'+open+'"><span class="ic" style="background:'+color(t.category)+'">'+esc(initials(t.merchant))+'</span><span class="who"><b>'+esc(t.merchant)+'</b><small>'+esc(t.category)+' · '+d.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})+'</small></span><span class="a num '+(t.type==="credit"?"in":"")+'">'+(t.type==="credit"?"+":"−")+money(t.amount)+'</span></button>';
+    html+='<div class="tx" data-id="'+esc(t.id)+'"><button class="txr" aria-expanded="'+open+'"><span class="ic" style="--ic:'+color(t.category)+'">'+icon(t.category)+'</span><span class="who"><b>'+esc(t.merchant)+'</b><small>'+esc(onLine(t)&&lineById(t.line).name.toLowerCase()!==t.category.toLowerCase()&&lineById(t.line).name.toLowerCase()!==String(t.merchant).toLowerCase()?lineById(t.line).name+' · '+t.category:t.category)+' · '+d.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})+'</small></span><span class="a num '+(t.type==="credit"?"in":"")+'">'+(t.type==="credit"?"+":"−")+money(t.amount)+'</span></button>';
     if(open){
-      html+='<div class="more"><div class="row"><select class="field" data-act="cat" aria-label="Category">'+CATS.map(function(c){return'<option'+(c[0]===t.category?' selected':'')+'>'+esc(c[0])+'</option>'}).join("")+'</select><button class="del'+(delArm===t.id?' armed':'')+'" data-act="del">'+(delArm===t.id?'Tap again to delete':'Delete')+'</button></div>'+
+      html+='<div class="more"><div class="row"><select class="field" data-act="cat" aria-label="Category">'+CATS.map(function(c){return'<option'+(c[0]===t.category?' selected':'')+'>'+esc(c[0])+'</option>'}).join("")+'</select>'+(t.type==="debit"&&lines.length?'<select class="field" data-act="line" aria-label="Budget line">'+lineOptions(onLine(t))+'</select>':'')+'<button class="del'+(delArm===t.id?' armed':'')+'" data-act="del">'+(delArm===t.id?'Tap again to delete':'Delete')+'</button></div>'+
         '<span class="hint">'+esc([t.bank,t.account?"··"+t.account:"",t.balance!=null&&!isNaN(t.balance)?"balance "+money(t.balance):""].filter(Boolean).join(" · "))+'</span>'+
         (t.raw?'<div class="sms">'+esc(t.raw)+'</div>':'')+'</div>';
     }
@@ -601,9 +708,10 @@ $("ledger").addEventListener("click",function(e){
   }
 });
 $("ledger").addEventListener("change",function(e){
+  if(e.target.dataset.act==="line"){assignTx(e.target.closest(".tx").dataset.id,e.target.value);return}
   if(e.target.dataset.act!=="cat")return;
   var id=e.target.closest(".tx").dataset.id,cat=e.target.value,t=txs.filter(function(x){return x.id===id})[0];
-  if(t)t.category=cat;render();
+  if(t){t.category=cat;var L0=onLine(t)?lineById(t.line):null;if(L0&&L0.cat!==cat)t.line=""}render();
   api("api_setCategory",id,cat).then(function(){toast(t&&t.type==="debit"?t.merchant+" will go to "+cat+" from now on":"Saved")}).catch(function(err){toast("Couldn't save. "+err.message)});
 });
 $("calGrid").addEventListener("click",function(e){var c=e.target.closest("[data-day]");if(!c)return;selDay=+c.dataset.day;render()});
@@ -663,7 +771,7 @@ $("connectBtn").onclick=function(){
   CONN=c;KEY=c.key;$("connectBtn").disabled=true;$("connectBtn").textContent="Connecting…";
   api("api_getData").then(function(d){
     try{localStorage.setItem("conn",JSON.stringify(c))}catch(e){}
-    txs=d.tx;budget=d.budget;budgets=d.budgets||{};$("budgetIn").value=budget||"";$("statusNote").hidden=true;showApp();render();
+    txs=d.tx;budget=d.budget;budgets=d.budgets||{};lines=d.lines||[];$("budgetIn").value=budget||"";$("statusNote").hidden=true;showApp();render();
   }).catch(function(e){CONN=null;KEY=null;$("connectErr").textContent=e.message})
   .then(function(){$("connectBtn").disabled=false;$("connectBtn").textContent="Connect"});
 };
@@ -674,7 +782,7 @@ $("disconnectBtn").onclick=function(){
   CONN=null;KEY=null;txs=[];budget=0;disArm=false;$("linkIn").value="";showConnect();
 };
 if(CONN){
-  try{var cached=JSON.parse(localStorage.getItem("cache")||"null");if(cached){txs=cached.tx||[];budget=cached.budget||0;budgets=cached.budgets||{};$("budgetIn").value=budget||""}}catch(e){}
+  try{var cached=JSON.parse(localStorage.getItem("cache")||"null");if(cached){txs=cached.tx||[];budget=cached.budget||0;budgets=cached.budgets||{};lines=cached.lines||[];$("budgetIn").value=budget||""}}catch(e){}
   showApp();render();load();
 } else showConnect();
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
