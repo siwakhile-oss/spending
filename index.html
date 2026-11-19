@@ -438,12 +438,31 @@ function api(name){
     .then(function(d){if(!d||d.ok===false)throw new Error(d&&d.error==="Wrong or missing key"?"Your link's key doesn't match. Check the link in the Settings tab of your sheet.":(d&&d.error)||"Something went wrong.");return d});
 }
 
+/* Offline copy of your data. Saved under "cache2", so an older copy of the app that is still
+   open somewhere (it writes "cache") can't overwrite it with data that has no budgets. */
+var CACHE_KEY="cache2";
+function saveCache(at){
+  if(!CONN)return;
+  var c={tx:txs,budget:budget,budgets:budgets,lines:lines,at:at||savedAt||Date.now()};
+  try{localStorage.setItem(CACHE_KEY,JSON.stringify(c))}
+  catch(e){ // phone storage full: keep everything except the original alert text
+    try{c.tx=txs.map(function(t){var x={};for(var k in t)if(k!=="raw")x[k]=t[k];return x});localStorage.setItem(CACHE_KEY,JSON.stringify(c))}catch(e2){}
+  }
+}
+function readCache(){
+  var c=null;
+  try{c=JSON.parse(localStorage.getItem(CACHE_KEY)||"null")}catch(e){}
+  if(!c){try{c=JSON.parse(localStorage.getItem("cache")||"null")}catch(e){}} // first run after the update
+  return c;
+}
+var savedAt=0;
+function whenSaved(){if(!savedAt)return"";var d=new Date(savedAt);return" (from "+d.toLocaleDateString("en-ZA",{day:"numeric",month:"short"})+", "+d.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})+")"}
 var loading=false;
 function load(){
   if(loading)return;loading=true;
   $("refresh").classList.add("spin");
-  api("api_getData").then(function(d){txs=d.tx;budget=d.budget;budgets=d.budgets||{};lines=d.lines||[];try{localStorage.setItem("cache",JSON.stringify({tx:d.tx,budget:d.budget,budgets:budgets,lines:lines,at:Date.now()}))}catch(e){}$("budgetIn").value=budget||"";$("statusNote").hidden=true;render()})
-  .catch(function(e){$("statusNote").hidden=false;$("statusNote").textContent=(txs.length?"Showing your last saved data. ":"Couldn't load your transactions. ")+e.message})
+  api("api_getData").then(function(d){txs=d.tx;budget=d.budget;budgets=d.budgets||{};lines=d.lines||[];savedAt=Date.now();saveCache(savedAt);$("budgetIn").value=budget||"";$("statusNote").hidden=true;render()})
+  .catch(function(e){$("statusNote").hidden=false;$("statusNote").textContent=(txs.length?"You're offline. Showing your last saved data"+whenSaved()+".":"Couldn't load your transactions. "+e.message)})
   .then(function(){loading=false;$("refresh").classList.remove("spin")});
 }
 function monthTx(){var y=viewMonth.getFullYear(),m=viewMonth.getMonth();return txs.filter(function(t){var d=new Date(t.ts);return d.getFullYear()===y&&d.getMonth()===m})}
@@ -465,7 +484,7 @@ document.querySelector("#bottomNav .in").addEventListener("keydown",function(e){
 });
 
 function render(){
-  if(CONN){try{localStorage.setItem("cache",JSON.stringify({tx:txs,budget:budget,budgets:budgets,lines:lines,at:Date.now()}))}catch(e){}}
+  saveCache();
   var now=new Date(),isCur=viewMonth.getFullYear()===now.getFullYear()&&viewMonth.getMonth()===now.getMonth();
   $("monthLabel").textContent=viewMonth.toLocaleString("en-ZA",{month:"long",year:"numeric"});
   $("nextM").disabled=isCur;
@@ -771,18 +790,18 @@ $("connectBtn").onclick=function(){
   CONN=c;KEY=c.key;$("connectBtn").disabled=true;$("connectBtn").textContent="Connecting…";
   api("api_getData").then(function(d){
     try{localStorage.setItem("conn",JSON.stringify(c))}catch(e){}
-    txs=d.tx;budget=d.budget;budgets=d.budgets||{};lines=d.lines||[];$("budgetIn").value=budget||"";$("statusNote").hidden=true;showApp();render();
+    txs=d.tx;budget=d.budget;budgets=d.budgets||{};lines=d.lines||[];savedAt=Date.now();$("budgetIn").value=budget||"";$("statusNote").hidden=true;showApp();render();
   }).catch(function(e){CONN=null;KEY=null;$("connectErr").textContent=e.message})
   .then(function(){$("connectBtn").disabled=false;$("connectBtn").textContent="Connect"});
 };
 var disArm=false;
 $("disconnectBtn").onclick=function(){
   if(!disArm){disArm=true;this.textContent="Tap again to disconnect";this.classList.add("armed");var b=this;setTimeout(function(){disArm=false;b.textContent="Disconnect";b.classList.remove("armed")},3000);return}
-  try{localStorage.removeItem("conn");localStorage.removeItem("cache")}catch(e){}
+  try{localStorage.removeItem("conn");localStorage.removeItem("cache");localStorage.removeItem(CACHE_KEY)}catch(e){}
   CONN=null;KEY=null;txs=[];budget=0;disArm=false;$("linkIn").value="";showConnect();
 };
 if(CONN){
-  try{var cached=JSON.parse(localStorage.getItem("cache")||"null");if(cached){txs=cached.tx||[];budget=cached.budget||0;budgets=cached.budgets||{};lines=cached.lines||[];$("budgetIn").value=budget||""}}catch(e){}
+  var cached=readCache();if(cached){txs=cached.tx||[];budget=cached.budget||0;budgets=cached.budgets||{};lines=cached.lines||[];savedAt=cached.at||0;$("budgetIn").value=budget||""}
   showApp();render();load();
 } else showConnect();
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}

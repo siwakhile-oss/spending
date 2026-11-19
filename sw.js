@@ -1,6 +1,6 @@
 // Keeps the app opening quickly and lets it start without internet.
 // Your transactions always come fresh from your Google Sheet; they are not stored here.
-const CACHE = 'spending-v5';
+const CACHE = 'spending-v6';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
